@@ -28,7 +28,7 @@ def all_cluster_info_query() -> tuple[str, dict]:
     return query, variables
 
 
-def search_object(name: str, cluster_ids: list[str], is_relic: bool = False) -> tuple[str, dict]:
+def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_nas_share_stale: bool = None) -> tuple[str, dict]:
     variables = {
         "filter": [
             {
@@ -58,6 +58,15 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False) -> 
         "sortOrder": "ASC",
         "first": 300
     }
+    
+    if is_nas_share_stale:
+        variables["filter"].append({
+            "field": "IS_STALE",
+            "texts": [
+                f"{is_nas_share_stale}"
+            ]
+        })
+      
 
     query = f"""query GlobalSearchObjectQuery($first: Int!, 
     $filter: [Filter!]!, 
@@ -74,6 +83,9 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False) -> 
         nodes {{
         	id
         	name
+          ...on NasShare {{
+            hostAddress
+          }}
         	objectType
           effectiveSlaDomain {{
             id

@@ -5,6 +5,7 @@ class ProtectedObject():
                  sla_id: str = None, sla_name: str = None) -> None:
         self.id = id
         self.name = name
+        self.location = None
         self.object_type = object_type
         self.sla_id = sla_id
         self.sla_name = sla_name

@@ -36,14 +36,16 @@ def get_all_cluster_info(access_token: str) -> list[Cluster]:
 def get_all_protected_objects(access_token: str,
                               selected_clusters: list[str],
                               csv_data: list,
-                              filter_object_type: str = None,) -> list[ProtectedObject]:
+                              is_relic: bool,
+                              is_nas_share_stale: bool,
+                              filter_object_type: str = None) -> list[ProtectedObject]:
     """Fetch all protected objects information"""
     protected_objects = []
 
     for obj in tqdm(csv_data, desc="Searching Objects"):
         try:
             query, variables = graphql.queries.search_object(
-                obj, selected_clusters)
+                obj, selected_clusters, is_relic, is_nas_share_stale)
             response = request(access_token, query, variables)
             nodes = response.get("data", {}).get(
                 "globalSearchResults", {}).get("nodes", [])

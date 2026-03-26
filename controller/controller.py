@@ -8,13 +8,13 @@ import data.data_parser as data_parser
 logger = logging.getLogger(__name__)
 
 
-def show_menu(access_token: str) -> tuple[list[str], str | None]:
+def show_menu(access_token: str) -> tuple[list[str], str | None, bool, bool | None]:
     """Show user a menu to select cluster(s) and optionally filter by object type."""
     clusters = data_parser.get_all_cluster_info(access_token)
 
     if not clusters:
         print("No clusters available.")
-        return [], None
+        return [], None, False, None
 
     print("Select the numbers of clusters you want to search the objects (comma-separated for multiple):")
     for idx, cluster in enumerate(clusters):
@@ -26,12 +26,12 @@ def show_menu(access_token: str) -> tuple[list[str], str | None]:
         selected_indices = [int(i.strip()) - 1 for i in selection.split(",")]
     except ValueError:
         print("Invalid input. Please enter only numbers separated by commas.")
-        return [], None
+        return [], None, False, None
 
     valid_indices = [i for i in selected_indices if 0 <= i < len(clusters)]
     if not valid_indices:
         print("No valid selections.")
-        return [], None
+        return [], None, False, None
 
     selected_ids = [clusters[i].id for i in valid_indices]
 
@@ -77,7 +77,17 @@ def show_menu(access_token: str) -> tuple[list[str], str | None]:
     else:
         filter_object_type = None
 
-    return selected_ids, filter_object_type
+    # Ask if the user wants to list relic objects
+    list_relic = input("Do you want to list relic objects? (yes/no): ").strip().lower()
+    is_relic = list_relic in ["yes", "y"]
+
+    # If NasShare is selected, ask about stale NAS shares
+    is_stale_nas = None
+    if filter_object_type == "NasShare":
+        list_stale = input("Do you want to list stale NAS shares? (yes/no): ").strip().lower()
+        is_stale_nas = list_stale in ["yes", "y"]
+
+    return selected_ids, filter_object_type, is_relic, is_stale_nas
 
 
 def parse_csv_files():
@@ -126,9 +136,11 @@ def parse_csv_files():
 def search_list_objects(access_token: str,
                         selected_clusters: list[str],
                         csv_data: str,
-                        filter_obj_type: str = None) -> list[ProtectedObject]:
+                        filter_obj_type: str = None,
+                        is_relic: bool = False,
+                        is_nas_share_stale: bool = None) -> list[ProtectedObject]:
     objects = data_parser.get_all_protected_objects(
-        access_token, selected_clusters, csv_data, filter_obj_type
+        access_token, selected_clusters, csv_data, filter_obj_type, is_relic, is_nas_share_stale
     )
 
     return objects

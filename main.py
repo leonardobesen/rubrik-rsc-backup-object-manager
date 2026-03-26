@@ -11,7 +11,7 @@ if __name__ == '__main__':
     rsc_access_token = connect.open_session()
 
     # User Menus
-    selected_clusters, object_types = controller.show_menu(rsc_access_token)
+    selected_clusters, object_types, is_relic, is_share_stale = controller.show_menu(rsc_access_token)
     csv_data = controller.parse_csv_files()
 
     print("Collecting Data...")
@@ -19,7 +19,9 @@ if __name__ == '__main__':
         access_token = rsc_access_token,
         selected_clusters = selected_clusters,
         csv_data = csv_data,
-        filter_obj_type = object_types
+        filter_obj_type = object_types,
+        is_relic = is_relic,
+        is_nas_share_stale = is_share_stale
     )
 
     print("Writing to file...")

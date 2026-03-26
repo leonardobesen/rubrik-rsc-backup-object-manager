@@ -25,13 +25,17 @@ def create_cluster_from_data(data: dict) -> Cluster | None:
 def create_object_from_data(data: dict) -> ProtectedObject | None:
     """Create a ProtectedObject object from a dictionary of data."""
     try:
-        return ProtectedObject(
+        protect_obj = ProtectedObject(
             id=data["id"],
             name=data["name"],
             object_type=data["objectType"],
             sla_id=data.get("effectiveSlaDomain", {}).get("id", ""),
             sla_name=data.get("effectiveSlaDomain", {}).get("name", "")
         )
+        
+        protect_obj.location = data.get("hostAddress","")
+        
+        return protect_obj
     except KeyError as e:
         logger.error(
             f"Missing expected object data field: {e}", exc_info=True)
