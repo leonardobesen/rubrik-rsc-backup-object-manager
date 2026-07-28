@@ -42,12 +42,6 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_
                 "texts": cluster_ids
             },
             {
-                "field": "IS_RELIC",
-                "texts": [
-                    f"{is_relic}"
-                ]
-            },
-            {
                 "field": "IS_GHOST",
                 "texts": [
                     "false"
@@ -59,11 +53,19 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_
         "first": 300
     }
     
-    if is_nas_share_stale:
+    if is_relic:
+        variables["filter"].append({
+            "field": "IS_RELIC",
+            "texts": [
+                "true"
+            ]
+        })
+    
+    if is_nas_share_stale == True:
         variables["filter"].append({
             "field": "IS_STALE",
             "texts": [
-                f"{is_nas_share_stale}"
+                "true"
             ]
         })
       

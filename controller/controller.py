@@ -82,7 +82,7 @@ def show_menu(access_token: str) -> tuple[list[str], str | None, bool, bool | No
     is_relic = list_relic in ["yes", "y"]
 
     # If NasShare is selected, ask about stale NAS shares
-    is_stale_nas = None
+    is_stale_nas = False
     if filter_object_type == "NasShare":
         list_stale = input("Do you want to list stale NAS shares? (yes/no): ").strip().lower()
         is_stale_nas = list_stale in ["yes", "y"]
@@ -138,9 +138,14 @@ def search_list_objects(access_token: str,
                         csv_data: str,
                         filter_obj_type: str = None,
                         is_relic: bool = False,
-                        is_nas_share_stale: bool = None) -> list[ProtectedObject]:
+                        is_nas_share_stale: bool = False) -> list[ProtectedObject]:
     objects = data_parser.get_all_protected_objects(
-        access_token, selected_clusters, csv_data, filter_obj_type, is_relic, is_nas_share_stale
+        access_token = access_token, 
+        selected_clusters = selected_clusters, 
+        csv_data = csv_data, 
+        filter_object_type = filter_obj_type, 
+        is_relic = is_relic, 
+        is_nas_share_stale = is_nas_share_stale
     )
 
     return objects
