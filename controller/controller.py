@@ -1,6 +1,7 @@
 import logging
-import os
+import re
 import sys
+from pathlib import Path
 import configuration.configuration as conf
 from model.protected_object import ProtectedObject
 import data.data_parser as data_parser
@@ -78,59 +79,62 @@ def show_menu(access_token: str) -> tuple[list[str], str | None, bool, bool | No
         filter_object_type = None
 
     # Ask if the user wants to list relic objects
-    list_relic = input("Do you want to list relic objects? (yes/no): ").strip().lower()
+    list_relic = input("Do you want to search for ONLY relic objects? (yes/no): ").strip().lower()
     is_relic = list_relic in ["yes", "y"]
 
     # If NasShare is selected, ask about stale NAS shares
     is_stale_nas = False
     if filter_object_type == "NasShare":
-        list_stale = input("Do you want to list stale NAS shares? (yes/no): ").strip().lower()
+        list_stale = input("Do you want to search for ONLY stale NAS shares? (yes/no): ").strip().lower()
         is_stale_nas = list_stale in ["yes", "y"]
 
     return selected_ids, filter_object_type, is_relic, is_stale_nas
 
 
-def parse_csv_files():
-    # Ensure the directory exists
-    directory = conf.report_input_path()
-
-    if not os.path.isdir(directory):
-        print(f"Directory does not exist: {directory}")
-        sys.exit(1)
-
-    # List all .csv files
-    csv_files = [f for f in os.listdir(
-        directory) if f.lower().endswith('.csv')]
-
-    if not csv_files:
-        print(f"No CSV files found in: {directory}")
-        sys.exit(1)
-
+def _prompt_file_selection(csv_files: list[Path]) -> Path:
     print("Select a CSV file to use:")
-    for idx, filename in enumerate(csv_files):
-        print(f"{idx + 1}. {filename}")
+    for idx, path in enumerate(csv_files, start=1):
+        print(f"{idx}. {path.name}")
 
     try:
         selection = int(input("Your choice: ")) - 1
-        if selection < 0 or selection >= len(csv_files):
-            print("Invalid selection.")
-            sys.exit(1)
     except ValueError:
         print("Invalid input. Please enter a number.")
         sys.exit(1)
 
-    selected_file = os.path.join(directory, csv_files[selection])
-    print(f"You selected: {selected_file}")
+    if selection not in range(len(csv_files)):
+        print("Invalid selection.")
+        sys.exit(1)
 
-    # Read file line-by-line as hostnames
+    return csv_files[selection]
+
+
+def _read_hostnames_from_file(csv_file: Path) -> list[str]:
     try:
-        with open(selected_file, mode='r', encoding='utf-8') as f:
-            hostnames = [line.strip() for line in f if line.strip()]
+        content = csv_file.read_text(encoding="utf-8")
     except Exception as e:
         print(f"Failed to read CSV file: {e}")
         sys.exit(1)
 
-    return hostnames
+    return [value.strip() for value in re.split(r"[\s,;:]+", content) if value.strip()]
+
+
+def parse_csv_files():
+    directory = Path(conf.report_input_path())
+
+    if not directory.is_dir():
+        print(f"Directory does not exist: {directory}")
+        sys.exit(1)
+
+    csv_files = sorted(directory.glob("*.csv"))
+    if not csv_files:
+        print(f"No CSV files found in: {directory}")
+        sys.exit(1)
+
+    selected_file = _prompt_file_selection(csv_files)
+    print(f"You selected: {selected_file}")
+
+    return _read_hostnames_from_file(selected_file)
 
 
 def search_list_objects(access_token: str,

@@ -28,7 +28,7 @@ def all_cluster_info_query() -> tuple[str, dict]:
     return query, variables
 
 
-def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_nas_share_stale: bool = None) -> tuple[str, dict]:
+def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_nas_share_stale: bool = False) -> tuple[str, dict]:
     variables = {
         "filter": [
             {
@@ -38,13 +38,15 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_
                 ]
             },
             {
-                "field": "CLUSTER_ID",
-                "texts": cluster_ids
-            },
-            {
                 "field": "IS_GHOST",
                 "texts": [
                     "false"
+                ]
+            },
+            {
+                "field": "IS_ACTIVE",
+                "texts": [
+                    "true"
                 ]
             }
         ],
@@ -52,7 +54,13 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_
         "sortOrder": "ASC",
         "first": 300
     }
-    
+
+    if cluster_ids:
+        variables["filter"].append({
+            "field": "CLUSTER_ID",
+            "texts": cluster_ids
+        })
+
     if is_relic:
         variables["filter"].append({
             "field": "IS_RELIC",
@@ -60,7 +68,7 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_
                 "true"
             ]
         })
-    
+
     if is_nas_share_stale == True:
         variables["filter"].append({
             "field": "IS_STALE",
@@ -68,33 +76,32 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_
                 "true"
             ]
         })
-      
 
-    query = f"""query GlobalSearchObjectQuery($first: Int!, 
-    $filter: [Filter!]!, 
-    $sortBy: HierarchySortByField, 
-    $sortOrder: SortOrder, 
-    $after: String) {{
+    query = """query GlobalSearchLocationQuery(
+      $first: Int!,
+      $filter: [Filter!]!, 
+      $sortBy: HierarchySortByField, 
+      $sortOrder: SortOrder,) {
       globalSearchResults(
         first: $first
         filter: $filter
         sortBy: $sortBy
         sortOrder: $sortOrder
-        after: $after
-      ) {{
-        nodes {{
-        	id
-        	name
-          ...on NasShare {{
+      ) {
+        nodes {
+          id
+          name
+          objectType
+          ...on NasShare {
             hostAddress
-          }}
-        	objectType
-          effectiveSlaDomain {{
+          }
+          effectiveSlaDomain {
             id
             name
-          }}
-        }}
-      }}
-    }}"""
+          }
+        }
+      }
+    }
+    """
 
     return query, variables
