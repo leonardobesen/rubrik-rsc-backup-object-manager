@@ -20,11 +20,13 @@ def generate_report(report_name: str, objs: list[ProtectedObject]) -> str:
 
     # Convert objects to DataFrame
     df = pd.DataFrame([{
+        'Search Term': o.search_term,
         'ID': o.id,
         'Name': o.name,
         'Object Type': o.object_type,
         'SLA ID': o.sla_id,
-        'SLA Name': o.name  # Note: This duplicates 'Name'
+        'SLA Name': o.sla_name,
+        'Location': o.location
     } for o in objs])
 
     # Save as CSV

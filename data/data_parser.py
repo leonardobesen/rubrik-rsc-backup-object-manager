@@ -66,4 +66,5 @@ def get_all_protected_objects(access_token: str,
             if not filter_object_type or \
                 protected_object.object_type.lower() == filter_object_type.lower():
                 protected_objects.append(protected_object)
+            protected_object.search_term = obj
     return protected_objects
