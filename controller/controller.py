@@ -1,13 +1,41 @@
 import logging
 import re
 import sys
+import argparse
 from pathlib import Path
+from datetime import datetime
 import configuration.configuration as conf
 from model.protected_object import ProtectedObject
 import data.data_parser as data_parser
 from services.snapshot_service import execute_on_demand_snapshots
 
 logger = logging.getLogger(__name__)
+
+
+def parse_command_line_args():
+    """
+    Parse command-line arguments.
+    
+    Returns:
+        Namespace with parsed arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="Search Rubrik Security Cloud for protected objects and optionally trigger on-demand snapshots",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py
+  python main.py --input hostname_list.csv
+        """
+    )
+    
+    parser.add_argument(
+        "--input",
+        help="CSV filename to use (must be in reports/input/ folder)",
+        required=False
+    )
+    
+    return parser.parse_args()
 
 
 def show_menu(access_token: str) -> tuple[list[str], str | None, bool, bool | None]:
@@ -93,12 +121,27 @@ def show_menu(access_token: str) -> tuple[list[str], str | None, bool, bool | No
 
 
 def _prompt_file_selection(csv_files: list[Path]) -> Path:
-    print("Select a CSV file to use:")
+    """
+    Display a formatted list of CSV files with metadata and prompt user to select.
+    Auto-selects if only one file exists.
+    """
+    if len(csv_files) == 1:
+        print(f"Using: {csv_files[0].name}")
+        return csv_files[0]
+    
+    print("\nAvailable CSV files:")
+    print(f"{'#':<3} {'Filename':<40} {'Size':<12} {'Modified':<20}")
+    print("-" * 75)
+    
     for idx, path in enumerate(csv_files, start=1):
-        print(f"{idx}. {path.name}")
-
+        size = path.stat().st_size
+        mod_time = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+        size_str = f"{size:,} B" if size < 1024 else f"{size/1024:.1f} KB"
+        print(f"{idx:<3} {path.name:<40} {size_str:<12} {mod_time:<20}")
+    
+    print("-" * 75)
     try:
-        selection = int(input("Your choice: ")) - 1
+        selection = int(input("Select a CSV file (enter number): ")) - 1
     except ValueError:
         print("Invalid input. Please enter a number.")
         sys.exit(1)
@@ -120,7 +163,16 @@ def _read_hostnames_from_file(csv_file: Path) -> list[str]:
     return [value.strip() for value in re.split(r"[\s,;:]+", content) if value.strip()]
 
 
-def parse_csv_files():
+def parse_csv_files(csv_filename: str = None):
+    """
+    Parse CSV files from reports/input directory.
+    
+    Args:
+        csv_filename: Optional specific filename to use. If not provided, user will be prompted.
+        
+    Returns:
+        List of hostnames extracted from the CSV file
+    """
     directory = Path(conf.report_input_path())
 
     if not directory.is_dir():
@@ -132,9 +184,21 @@ def parse_csv_files():
         print(f"No CSV files found in: {directory}")
         sys.exit(1)
 
-    selected_file = _prompt_file_selection(csv_files)
-    print(f"You selected: {selected_file}")
+    # If specific filename provided via command line, try to use it
+    if csv_filename:
+        matching_file = next((f for f in csv_files if f.name == csv_filename), None)
+        if matching_file:
+            print(f"Using specified file: {matching_file.name}")
+            selected_file = matching_file
+        else:
+            print(f"Error: CSV file '{csv_filename}' not found in {directory}")
+            print(f"Available files: {', '.join(f.name for f in csv_files)}")
+            sys.exit(1)
+    else:
+        # No filename specified, prompt user
+        selected_file = _prompt_file_selection(csv_files)
 
+    print(f"Selected: {selected_file}")
     return _read_hostnames_from_file(selected_file)
 
 

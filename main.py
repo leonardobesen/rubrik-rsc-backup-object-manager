@@ -8,12 +8,15 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == '__main__':
+    # Parse command-line arguments
+    args = controller.parse_command_line_args()
+    
     # Establish connection with Rubrik RSC
     rsc_access_token = connect.open_session()
 
     # User Menus
     selected_clusters, object_types, is_relic, is_share_stale = controller.show_menu(rsc_access_token)
-    csv_data = controller.parse_csv_files()
+    csv_data = controller.parse_csv_files(csv_filename=args.input)
 
     print("Collecting Data...")
     objects_info = controller.search_list_objects(
