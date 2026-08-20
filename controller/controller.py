@@ -5,6 +5,7 @@ from pathlib import Path
 import configuration.configuration as conf
 from model.protected_object import ProtectedObject
 import data.data_parser as data_parser
+from services.snapshot_service import execute_on_demand_snapshots
 
 logger = logging.getLogger(__name__)
 
@@ -153,3 +154,89 @@ def search_list_objects(access_token: str,
     )
 
     return objects
+
+
+def prompt_and_execute_snapshots(access_token: str, protected_objects: list[ProtectedObject]) -> dict | None:
+    """
+    Prompt user if they want to take on-demand snapshots and execute if confirmed.
+    Objects without a valid SLA ID (UNPROTECTED or DO_NOT_PROTECT) are excluded.
+    
+    Args:
+        access_token: RSC API access token
+        protected_objects: List of protected objects to snapshot
+        
+    Returns:
+        Dictionary with snapshot results or None if user declines
+    """
+    if not protected_objects:
+        print("No objects available to snapshot.")
+        return None
+    
+    # Separate objects with and without valid SLA IDs
+    objects_with_sla = [obj for obj in protected_objects 
+                        if obj.sla_id and obj.sla_id.upper() not in ["UNPROTECTED", "DO_NOT_PROTECT"]]
+    objects_without_sla = [obj for obj in protected_objects 
+                           if not obj.sla_id or obj.sla_id.upper() in ["UNPROTECTED", "DO_NOT_PROTECT"]]
+    
+    if not objects_with_sla:
+        print("\nNo objects with valid SLA assignments found.")
+        if objects_without_sla:
+            print(f"Note: {len(objects_without_sla)} objects are marked as UNPROTECTED or DO_NOT_PROTECT and will be skipped.")
+        return None
+    
+    # Display summary
+    print(f"\n{'='*60}")
+    print("Snapshot Eligibility Summary")
+    print(f"{'='*60}")
+    print(f"Objects with valid SLA: {len(objects_with_sla)}")
+    if objects_without_sla:
+        print(f"Objects to skip (UNPROTECTED/DO_NOT_PROTECT): {len(objects_without_sla)}")
+    print(f"{'='*60}\n")
+    
+    response = input("Do you want to take on-demand snapshots for objects with valid SLA? (yes/no): ").strip().lower()
+    
+    if response not in ["yes", "y"]:
+        print("Snapshot operation cancelled.")
+        return None
+    
+    print("\nExecuting on-demand snapshots...")
+    try:
+        results = execute_on_demand_snapshots(access_token, objects_with_sla)
+        
+        # Print summary
+        total_objects = sum(len(r) for r in results.values())
+        successful = sum(1 for r_list in results.values() for r in r_list if r.status == "success")
+        failed = sum(1 for r_list in results.values() for r in r_list if r.status == "failed")
+        
+        print(f"\n{'='*60}")
+        print(f"Snapshot Execution Summary")
+        print(f"{'='*60}")
+        print(f"Total Objects Processed: {total_objects}")
+        print(f"Successful: {successful}")
+        print(f"Failed: {failed}")
+        print(f"Number of SLA Groups: {len(results)}")
+        if objects_without_sla:
+            print(f"Objects Skipped (No Valid SLA): {len(objects_without_sla)}")
+        
+        # Print details per SLA
+        for sla_id, result_list in results.items():
+            successful_in_sla = sum(1 for r in result_list if r.status == "success")
+            failed_in_sla = sum(1 for r in result_list if r.status == "failed")
+            sla_name = result_list[0].sla_name if result_list else "Unknown"
+            print(f"\nSLA: {sla_name} ({sla_id})")
+            print(f"  ✓ Successful: {successful_in_sla}, ✗ Failed: {failed_in_sla}")
+            
+            # Print failed objects details
+            for result in result_list:
+                if result.status == "failed" and result.error:
+                    print(f"    - {result.object_name}: {result.error}")
+        
+        print(f"\n{'='*60}")
+        
+        return results
+    
+    except Exception as e:
+        print(f"Error executing snapshots: {str(e)}")
+        logger.exception("Failed to execute snapshots")
+        return None
+

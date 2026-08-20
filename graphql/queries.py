@@ -105,3 +105,28 @@ def search_object(name: str, cluster_ids: list[str], is_relic: bool = False, is_
     """
 
     return query, variables
+
+
+def take_on_demand_snapshot_mutation(sla_id: str, workload_ids: list[str]) -> tuple[str, dict]:
+    """GraphQL mutation to trigger on-demand snapshots for multiple objects within the same SLA"""
+    variables = {
+        "input": {
+            "slaId": sla_id,
+            "workloadIds": workload_ids
+        }
+    }
+
+    mutation = """mutation massOnDemandOracle($input: TakeOnDemandSnapshotInput!){
+      takeOnDemandSnapshot(input: $input) {
+        taskchainUuids {
+          objectId: workloadId
+          taskchainUuid
+        }
+        errors {
+          objectId: workloadId
+          error
+        }
+      }
+    }"""
+
+    return mutation, variables

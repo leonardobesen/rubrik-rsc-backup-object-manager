@@ -1,5 +1,6 @@
 import connection.connect as connect
 import file_manager.write_to_file as write_to_file
+import file_manager.snapshot_report as snapshot_report
 import configuration.configuration as config
 from controller import controller
 import logging
@@ -31,6 +32,14 @@ if __name__ == '__main__':
     )
 
     print(f"Saved to file {file_path}")
+
+    # Ask user if they want to take on-demand snapshots
+    snapshot_results = controller.prompt_and_execute_snapshots(rsc_access_token, objects_info)
+    
+    if snapshot_results:
+        # Generate snapshot report
+        snapshot_file_path = snapshot_report.generate_snapshot_report(snapshot_results)
+        print(f"\nSnapshot results saved to file {snapshot_file_path}")
 
     # Close session
     connect.close_session(rsc_access_token)
