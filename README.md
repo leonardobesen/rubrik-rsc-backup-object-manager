@@ -1,10 +1,10 @@
-# rubrik-rsc-search-for-protected-objects
+# rubrik-rsc-backup-object-manager
 
-A utility that searches Rubrik Security Cloud (RSC) protected objects (Physical Host, Volume Group, Oracle, SQL Server, Filesets, etc.) for a list of hostnames and exports matching results to CSV reports. With optional on-demand snapshot capability grouped by SLA ID.
+A utility that searches Rubrik Security Cloud (RSC) for protected backup objects by hostname and manages on-demand snapshots grouped by SLA ID. Supports multiple object types (Physical Host, Volume Group, Oracle, SQL Server, Filesets, etc.) with optional bulk snapshot triggering.
 
 ## Highlights
 
-- Search RSC for multiple protected-object types
+- Search RSC for multiple protected-object types by hostname
 - Load hostnames from simple CSV files
 - Configurable via `configuration/config.json`
 - Trigger on-demand snapshots grouped by SLA ID
